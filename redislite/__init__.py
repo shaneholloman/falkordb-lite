@@ -103,6 +103,7 @@ if os.path.exists(os.path.join(os.path.dirname(__file__), "bin/falkordb.so")):
         'bin/falkordb.so'
     )  # pragma: no cover
 
-__all__ = ['client', 'configuration', 'debug', 'patch']
+__all__ = ['client', 'configuration', 'debug', 'patch', 'falkordb_client']
 
 from .client import Redis, StrictRedis  # NOQA
+from .falkordb_client import FalkorDB, Graph  # NOQA
