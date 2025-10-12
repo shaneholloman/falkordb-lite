@@ -61,6 +61,7 @@ __source_url__ = str('')
 __redis_server_info__ = {}
 __redis_executable__ = str('')
 __redis_server_version__ = str('')
+__falkordb_module__ = str('')
 
 try:
     import pkg_resources
@@ -94,6 +95,12 @@ if os.path.exists(os.path.join(os.path.dirname(__file__), "bin/redis-server")):
     __redis_executable__ = os.path.join(
         os.path.dirname(__file__),
         'bin/redis-server'
+    )  # pragma: no cover
+
+if os.path.exists(os.path.join(os.path.dirname(__file__), "bin/falkordb.so")):
+    __falkordb_module__ = os.path.join(
+        os.path.dirname(__file__),
+        'bin/falkordb.so'
     )  # pragma: no cover
 
 __all__ = ['client', 'configuration', 'debug', 'patch']

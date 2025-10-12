@@ -29,8 +29,9 @@ METADATA_FILENAME = 'redislite/package_metadata.json'
 BASEPATH = os.path.dirname(os.path.abspath(__file__))
 REDIS_PATH = os.path.join(BASEPATH, 'redis.submodule')
 REDIS_SERVER_METADATA = {}
-REDIS_VERSION = os.environ.get('REDIS_VERSION', '6.2.14')
+REDIS_VERSION = os.environ.get('REDIS_VERSION', '7.4.1')
 REDIS_URL = f'http://download.redis.io/releases/redis-{REDIS_VERSION}.tar.gz'
+FALKORDB_VERSION = os.environ.get('FALKORDB_VERSION', 'v4.14.2')
 install_scripts = ''
 try:
     VERSION = check_output(['meta', 'get', 'package.version']).decode(errors='ignore')
@@ -55,6 +56,31 @@ def download_redis_submodule():
 
         # print('Updating jemalloc')
         # os.system('(cd redis.submodule;./deps/update-jemalloc.sh 4.0.4)')
+
+
+def download_falkordb_module():
+    """Download FalkorDB module binary from GitHub releases"""
+    # Determine the architecture and select appropriate module
+    import platform
+    machine = platform.machine().lower()
+    
+    if machine in ['x86_64', 'amd64']:
+        module_name = 'falkordb-x64.so'
+    elif machine in ['aarch64', 'arm64']:
+        module_name = 'falkordb-arm64v8.so'
+    else:
+        raise Exception(f'Unsupported architecture: {machine}')
+    
+    falkordb_url = f'https://github.com/FalkorDB/FalkorDB/releases/download/{FALKORDB_VERSION}/{module_name}'
+    module_path = os.path.join(BASEPATH, 'falkordb.so')
+    
+    print(f'Downloading FalkorDB module from {falkordb_url}')
+    try:
+        urllib.request.urlretrieve(falkordb_url, module_path)
+        print(f'FalkorDB module downloaded to {module_path}')
+    except Exception as e:
+        print(f'Failed to download FalkorDB module: {e}')
+        raise
 
 
 class BuildRedis(build):
@@ -98,6 +124,12 @@ class BuildRedis(build):
             for target in target_files:
                 logger.debug('copy: %s -> %s', target, self.build_scripts)
                 self.copy_file(target, self.build_scripts)
+            
+            # Copy FalkorDB module if it exists
+            falkordb_module = os.path.join(BASEPATH, 'falkordb.so')
+            if os.path.exists(falkordb_module):
+                logger.debug('copy: %s -> %s', falkordb_module, self.build_scripts)
+                self.copy_file(falkordb_module, self.build_scripts)
 
 
 class InstallRedis(install):
@@ -160,7 +192,7 @@ class InstallRedis(install):
 #  without running setup() to allow external scripts to see the setup settings.
 args = {
     'package_data': {
-        'redislite': ['package_metadata.json', 'bin/redis-server'],
+        'redislite': ['package_metadata.json', 'bin/redis-server', 'bin/falkordb.so'],
     },
     'include_package_data': True,
     'cmdclass': {
@@ -275,6 +307,12 @@ if __name__ == '__main__':
     if not os.path.exists(REDIS_PATH):
         logger.debug(f'Downloading redis version {REDIS_VERSION}')
         download_redis_submodule()
+    
+    # Download FalkorDB module if not present
+    falkordb_module = os.path.join(BASEPATH, 'falkordb.so')
+    if not os.path.exists(falkordb_module):
+        logger.debug(f'Downloading FalkorDB version {FALKORDB_VERSION}')
+        download_falkordb_module()
 
     logger.debug('Building for platform: %s', distutils.util.get_platform())
 
