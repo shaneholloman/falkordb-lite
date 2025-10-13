@@ -64,8 +64,9 @@ __redis_server_version__ = str('')
 __falkordb_module__ = str('')
 
 try:
-    import pkg_resources
-    __git_version__ = pkg_resources.get_distribution("redislite").version
+    # Use importlib.metadata instead of deprecated pkg_resources
+    from importlib.metadata import version
+    __git_version__ = version("redislite")
     __version__ = __git_version__
 except (ImportError, Exception):  # pragma: no cover
     pass

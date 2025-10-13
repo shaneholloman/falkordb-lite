@@ -84,6 +84,19 @@ $ pip install -r requirements.txt
 $ python setup.py install
 ```
 
+### Verifying Installation
+
+After installation, you can verify that everything is working correctly:
+
+```console
+$ python verify_install.py
+```
+
+This will test:
+- Package imports
+- FalkorDB instance creation
+- Basic graph operations
+
 ### Development Installation
 
 For development or working from source in a virtual environment:

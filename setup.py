@@ -130,6 +130,10 @@ class BuildRedis(build):
             if os.path.exists(falkordb_module):
                 logger.debug('copy: %s -> %s', falkordb_module, self.build_scripts)
                 self.copy_file(falkordb_module, self.build_scripts)
+                # Set executable permissions on the FalkorDB module
+                dest_falkordb = os.path.join(self.build_scripts, 'falkordb.so')
+                os.chmod(dest_falkordb, 0o755)
+                logger.debug('Set executable permissions on %s', dest_falkordb)
 
 
 class InstallRedis(install):
@@ -161,6 +165,13 @@ class InstallRedis(install):
             self.build_scripts, self.install_scripts
         )
         self.copy_tree(self.build_scripts, self.install_scripts)
+
+        # Set executable permissions on FalkorDB module after installation
+        for install_dir in [module_bin, self.install_scripts]:
+            falkordb_path = os.path.join(install_dir, 'falkordb.so')
+            if os.path.exists(falkordb_path):
+                os.chmod(falkordb_path, 0o755)
+                logger.debug('Set executable permissions on %s', falkordb_path)
 
         install_scripts = self.install_scripts
         print('install_scripts: %s' % install_scripts)
