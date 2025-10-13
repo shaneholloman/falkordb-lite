@@ -11,6 +11,7 @@ import subprocess
 
 from setuptools import setup
 from setuptools.command.install import install
+from setuptools.command.develop import develop
 import shutil
 import sys
 import urllib.request
@@ -86,6 +87,33 @@ def download_falkordb_module():
 class BuildRedis(build):
     global REDIS_SERVER_METADATA
 
+    def _copy_binaries_to_source(self):
+        """Copy built binaries to redislite/bin/ in the source directory for editable installs"""
+        if not self.build_scripts or not os.path.exists(self.build_scripts):
+            logger.warning('Build scripts directory not found, skipping binary copy to source')
+            return
+        
+        # Create redislite/bin in the source directory
+        source_bin = os.path.join(BASEPATH, 'redislite', 'bin')
+        if not os.path.exists(source_bin):
+            os.makedirs(source_bin, 0o0755)
+            logger.debug('Created directory: %s', source_bin)
+        
+        binaries = ['redis-server', 'redis-cli', 'falkordb.so']
+        
+        for binary in binaries:
+            src = os.path.join(self.build_scripts, binary)
+            dst = os.path.join(source_bin, binary)
+            if os.path.exists(src):
+                shutil.copy2(src, dst)
+                os.chmod(dst, 0o755)
+                logger.debug('Copied and set permissions: %s -> %s', src, dst)
+        
+        print('*' * 80)
+        print('Binaries copied to redislite/bin/ for editable install')
+        print(f'  Location: {source_bin}')
+        print('*' * 80)
+
     def run(self):
         # run original build code
         build.run(self)
@@ -134,6 +162,71 @@ class BuildRedis(build):
                 dest_falkordb = os.path.join(self.build_scripts, 'falkordb.so')
                 os.chmod(dest_falkordb, 0o755)
                 logger.debug('Set executable permissions on %s', dest_falkordb)
+            
+            # Also copy binaries to source directory for editable installs
+            self._copy_binaries_to_source()
+
+
+class PostBuildCopyBinaries:
+    """Mixin to copy binaries to redislite/bin/ for editable installs"""
+    
+    def copy_binaries_to_source(self):
+        """Copy built binaries to redislite/bin/ in the source directory"""
+        # Determine the build_scripts directory
+        build_cmd = self.get_finalized_command('build')
+        build_scripts = build_cmd.build_scripts
+        
+        if not build_scripts or not os.path.exists(build_scripts):
+            logger.warning('Build scripts directory not found, skipping binary copy')
+            return
+        
+        # Create redislite/bin in the source directory
+        source_bin = os.path.join(BASEPATH, 'redislite', 'bin')
+        if not os.path.exists(source_bin):
+            os.makedirs(source_bin, 0o0755)
+            logger.debug('Created directory: %s', source_bin)
+        
+        # Copy redis-server
+        redis_server_src = os.path.join(build_scripts, 'redis-server')
+        redis_server_dst = os.path.join(source_bin, 'redis-server')
+        if os.path.exists(redis_server_src):
+            shutil.copy2(redis_server_src, redis_server_dst)
+            os.chmod(redis_server_dst, 0o755)
+            logger.debug('Copied and set permissions: %s -> %s', redis_server_src, redis_server_dst)
+        
+        # Copy redis-cli
+        redis_cli_src = os.path.join(build_scripts, 'redis-cli')
+        redis_cli_dst = os.path.join(source_bin, 'redis-cli')
+        if os.path.exists(redis_cli_src):
+            shutil.copy2(redis_cli_src, redis_cli_dst)
+            os.chmod(redis_cli_dst, 0o755)
+            logger.debug('Copied and set permissions: %s -> %s', redis_cli_src, redis_cli_dst)
+        
+        # Copy FalkorDB module
+        falkordb_src = os.path.join(build_scripts, 'falkordb.so')
+        falkordb_dst = os.path.join(source_bin, 'falkordb.so')
+        if os.path.exists(falkordb_src):
+            shutil.copy2(falkordb_src, falkordb_dst)
+            os.chmod(falkordb_dst, 0o755)
+            logger.debug('Copied and set permissions: %s -> %s', falkordb_src, falkordb_dst)
+        
+        print('*' * 80)
+        print('Binaries copied to redislite/bin/ for editable install')
+        print(f'  redis-server: {redis_server_dst}')
+        print(f'  redis-cli: {redis_cli_dst}')
+        print(f'  falkordb.so: {falkordb_dst}')
+        print('*' * 80)
+
+
+class DevelopRedis(PostBuildCopyBinaries, develop):
+    """Custom develop command for editable installs"""
+    
+    def run(self):
+        # Run the standard develop installation
+        develop.run(self)
+        
+        # Copy binaries to source directory for editable installs
+        self.copy_binaries_to_source()
 
 
 class InstallRedis(install):
@@ -209,6 +302,7 @@ args = {
     'cmdclass': {
         'build': BuildRedis,
         'install': InstallRedis,
+        'develop': DevelopRedis,
     },
 
     # We put in a bogus extension module so wheel knows this package has

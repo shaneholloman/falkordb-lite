@@ -112,9 +112,19 @@ $ pip install setuptools wheel
 # Install runtime dependencies
 $ pip install -r requirements.txt
 
-# Build and install
-$ python setup.py install
+# Build the project (this compiles Redis and copies binaries automatically)
+$ python setup.py build
+
+# Install in editable mode for development
+$ pip install -e .
 ```
+
+The `python setup.py build` command will:
+- Compile Redis from source
+- Download the FalkorDB module
+- Automatically copy binaries to `redislite/bin/` with proper permissions
+
+**Note:** If you encounter issues, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for details.
 
 
 ## Getting Started
