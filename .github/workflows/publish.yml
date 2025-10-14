@@ -61,7 +61,7 @@ jobs:
     
     - name: Repair wheel
       run: |
-        auditwheel repair dist/*.whl --plat manylinux_2_35_x86_64 -w dist/
+        auditwheel repair dist/*.whl --plat manylinux_2_17_x86_64 -w dist/
     
     - name: Publish to PyPI
       if: github.event_name == 'release' || github.event.inputs.publish == 'true'
