@@ -88,9 +88,9 @@ def download_and_build_falkordb():
     print('*' * 80)
     
     try:
-        # Run make in the FalkorDB directory
-        print('Running make...')
-        result = call(['make'], cwd=falkordb_path)
+        # Run make in the FalkorDB directory with static linking
+        print('Running make with static linking...')
+        result = call(['make', 'STATIC=1'], cwd=falkordb_path)
         if result != 0:
             raise Exception(f'FalkorDB build failed with exit code {result}')
         
