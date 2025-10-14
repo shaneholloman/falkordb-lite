@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
     
     env:
-      REDIS_VERSION: '6.2.14'
+      REDIS_VERSION: '8.2.2'
       FALKORDB_VERSION: 'v4.14.2'
     
     steps:
