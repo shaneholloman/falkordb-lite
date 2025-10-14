@@ -56,6 +56,13 @@ jobs:
       run: |
         python setup.py build
     
+    - name: Check FalkorDB module dependencies
+      run: |
+        if [ -f redislite/bin/falkordb.so ]; then
+          echo "FalkorDB module found, checking dependencies:"
+          ldd redislite/bin/falkordb.so || true
+        fi
+    
     - name: Install package
       run: |
         pip install -e .
