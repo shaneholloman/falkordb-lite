@@ -22,7 +22,7 @@ It provides enhanced versions of the Redis-Py Python bindings with FalkorDB grap
 
 ## Requirements
 
-The falkordblite module requires Python 3.8 or higher.
+The falkordblite module requires Python 3.12 or higher.
 
 ### Python Dependencies
 
