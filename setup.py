@@ -61,16 +61,28 @@ def download_redis_submodule():
 
 def download_falkordb_module():
     """Download FalkorDB module binary from GitHub releases"""
-    # Determine the architecture and select appropriate module
+    # Determine the platform and architecture and select appropriate module
     import platform
     machine = platform.machine().lower()
+    system = platform.system().lower()
     
-    if machine in ['x86_64', 'amd64']:
-        module_name = 'falkordb-x64.so'
-    elif machine in ['aarch64', 'arm64']:
-        module_name = 'falkordb-arm64v8.so'
+    # Determine module name based on platform and architecture
+    if system == 'darwin':  # macOS
+        if machine in ['arm64', 'aarch64']:
+            module_name = 'falkordb-macos-arm64v8.so'
+        elif machine in ['x86_64', 'amd64']:
+            module_name = 'falkordb-macos-x64.so'
+        else:
+            raise Exception(f'Unsupported macOS architecture: {machine}')
+    elif system == 'linux':
+        if machine in ['x86_64', 'amd64']:
+            module_name = 'falkordb-x64.so'
+        elif machine in ['aarch64', 'arm64']:
+            module_name = 'falkordb-arm64v8.so'
+        else:
+            raise Exception(f'Unsupported Linux architecture: {machine}')
     else:
-        raise Exception(f'Unsupported architecture: {machine}')
+        raise Exception(f'Unsupported platform: {system}')
     
     falkordb_url = f'https://github.com/FalkorDB/FalkorDB/releases/download/{FALKORDB_VERSION}/{module_name}'
     module_path = os.path.join(BASEPATH, 'falkordb.so')
