@@ -63,6 +63,25 @@ class RedisMixin(object):
     redis_configuration = None
     redis_configuration_filename = None
 
+    def _wait_for_pid_exit(self, pid, timeout=5.0, interval=0.1):
+        """
+        Wait for a process id to disappear from the system.
+
+        Args:
+            pid: Process ID to wait for.
+            timeout: Maximum seconds to wait (default 5.0).
+            interval: Sleep interval between checks (default 0.1).
+
+        Returns:
+            bool: True if process exited within timeout, False otherwise.
+        """
+        end_time = time.time() + timeout
+        while time.time() < end_time:
+            if not psutil.pid_exists(pid):
+                return True
+            time.sleep(interval)
+        return not psutil.pid_exists(pid)
+
     def _cleanup(self, sys_modules=None):
         """
         Stop the redis-server for this instance if it's running
@@ -72,7 +91,8 @@ class RedisMixin(object):
             import sys
             sys.modules.update(sys_modules)
 
-        if self.pid:
+        pid = self.pid
+        if pid:
             # logger.debug('Connection count: %s', self._connection_count())
             if self._connection_count() <= 1:
                 logger.debug(
@@ -82,12 +102,12 @@ class RedisMixin(object):
                 )
                 # noinspection PyUnresolvedReferences
                 logger.debug(
-                    'Shutting down redis server with pid of %r', self.pid
+                    'Shutting down redis server with pid of %r', pid
                 )
                 try:
                     self.shutdown(save=True, now=True, force=True)
                     try:  # pragma: no cover
-                        process = psutil.Process(self.pid)
+                        process = psutil.Process(pid)
                     except psutil.NoSuchProcess:  # pragma: no cover
                         process = None
                     if process:   # pragma: no cover
@@ -96,21 +116,29 @@ class RedisMixin(object):
                                 break
                             time.sleep(.2)
                 except redis.RedisError:  # pragma: no cover
-                    if self.pid != 0:
+                    if pid != 0:
                         try:
-                            process = psutil.Process(self.pid)
+                            process = psutil.Process(pid)
                             if process.is_running() and process.pid != 0:
-                                logger.info(f'Redis shutdown failed, sending sigterm to {self.pid}')
-                                os.kill(self.pid, signal.SIGTERM)
+                                logger.info(f'Redis shutdown failed, sending sigterm to {pid}')
+                                os.kill(pid, signal.SIGTERM)
                                 for i in range(120):  # default shutdown timeout is 10 seconds
                                     if not process.is_running():
                                         break
                                     time.sleep(.1)
                             if process.is_running() and process.pid != 0:
-                                logger.warning('Redis graceful shutdown failed, forcefully killing pid %r', self.pid)
-                                os.kill(self.pid, signal.SIGKILL)
+                                logger.warning('Redis graceful shutdown failed, forcefully killing pid %r', pid)
+                                os.kill(pid, signal.SIGKILL)
                         except psutil.NoSuchProcess:
                             pass
+                else:
+                    if not self._wait_for_pid_exit(pid, timeout=5.0):
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                        except OSError:
+                            pass
+                        else:
+                            self._wait_for_pid_exit(pid, timeout=2.0)
                 self.socket_file = None
 
                 if self.pidfile and os.path.exists(
