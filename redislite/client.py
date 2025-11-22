@@ -64,7 +64,17 @@ class RedisMixin(object):
     redis_configuration_filename = None
 
     def _wait_for_pid_exit(self, pid, timeout=5.0, interval=0.1):
-        """Wait for a process id to disappear from the system."""
+        """
+        Wait for a process id to disappear from the system.
+
+        Args:
+            pid: Process ID to wait for.
+            timeout: Maximum seconds to wait (default 5.0).
+            interval: Sleep interval between checks (default 0.1).
+
+        Returns:
+            bool: True if process exited within timeout, False otherwise.
+        """
         end_time = time.time() + timeout
         while time.time() < end_time:
             if not psutil.pid_exists(pid):
