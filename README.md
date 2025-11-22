@@ -78,35 +78,35 @@ Here are some examples of using the falkordblite module.
 Here we create a graph database, add some nodes and relationships, and query them using Cypher:
 
 ```python
->>> from redislite.falkordb_client import FalkorDB
->>> 
->>> # Create a FalkorDB instance with embedded Redis + FalkorDB
->>> db = FalkorDB('/tmp/falkordb.db')
->>> 
->>> # Select a graph
->>> g = db.select_graph('social')
->>> 
->>> # Create nodes with Cypher
->>> result = g.query('CREATE (p:Person {name: "Alice", age: 30}) RETURN p')
->>> result = g.query('CREATE (p:Person {name: "Bob", age: 25}) RETURN p')
->>> 
->>> # Create a relationship
->>> result = g.query('''
-...     MATCH (a:Person {name: "Alice"}), (b:Person {name: "Bob"})
-...     CREATE (a)-[r:KNOWS]->(b)
-...     RETURN r
-... ''')
->>> 
->>> # Query the graph
->>> result = g.query('MATCH (p:Person) RETURN p.name, p.age')
->>> for row in result.result_set:
-...     print(row)
->>> 
->>> # Read-only query
->>> result = g.ro_query('MATCH (p:Person)-[r:KNOWS]->(f) RETURN p.name, f.name')
->>> 
->>> # Delete the graph when done
->>> g.delete()
+from redislite.falkordb_client import FalkorDB
+
+# Create a FalkorDB instance with embedded Redis + FalkorDB
+db = FalkorDB('/tmp/falkordb.db')
+
+# Select a graph
+g = db.select_graph('social')
+
+# Create nodes with Cypher
+result = g.query('CREATE (p:Person {name: "Alice", age: 30}) RETURN p')
+result = g.query('CREATE (p:Person {name: "Bob", age: 25}) RETURN p')
+
+# Create a relationship
+result = g.query('''
+    MATCH (a:Person {name: "Alice"}), (b:Person {name: "Bob"})
+    CREATE (a)-[r:KNOWS]->(b)
+    RETURN r
+''')
+
+# Query the graph
+result = g.query('MATCH (p:Person) RETURN p.name, p.age')
+for row in result.result_set:
+    print(row)
+
+# Read-only query
+result = g.ro_query('MATCH (p:Person)-[r:KNOWS]->(f) RETURN p.name, f.name')
+
+# Delete the graph when done
+g.delete()
 ```
 
 ### Using Redis Key-Value Operations
@@ -114,14 +114,15 @@ Here we create a graph database, add some nodes and relationships, and query the
 You can still use traditional Redis operations alongside graph operations:
 
 ```python
->>> from redislite import Redis
->>> redis_connection = Redis('/tmp/redis.db')
->>> redis_connection.keys()
-[]
->>> redis_connection.set('key', 'value')
-True
->>> redis_connection.get('key')
-b'value'
+from redislite import Redis
+
+redis_connection = Redis('/tmp/redis.db')
+redis_connection.keys()
+# []
+redis_connection.set('key', 'value')
+# True
+redis_connection.get('key')
+# b'value'
 ```
 
 ### Persistence
@@ -129,16 +130,16 @@ b'value'
 FalkorDB data persists between sessions. Open the same database file to access previously stored graphs:
 
 ```python
->>> from redislite.falkordb_client import FalkorDB
->>> 
->>> # Open the same database
->>> db = FalkorDB('/tmp/falkordb.db')
->>> g = db.select_graph('social')
->>> 
->>> # Data from previous session is still there
->>> result = g.query('MATCH (p:Person) RETURN p.name')
->>> for row in result.result_set:
-...     print(row)
+from redislite.falkordb_client import FalkorDB
+
+# Open the same database
+db = FalkorDB('/tmp/falkordb.db')
+g = db.select_graph('social')
+
+# Data from previous session is still there
+result = g.query('MATCH (p:Person) RETURN p.name')
+for row in result.result_set:
+    print(row)
 ```
 
 ## Compatibility
@@ -148,13 +149,14 @@ that use Redis to use the redislite classes.  Here we patch Redis and use the
 redis_collections module.
 
 ```python
->>> import redislite.patch
->>> redislite.patch.patch_redis()
->>> import redis_collections
->>> td = redis_collections.Dict()
->>> td['foo']='bar'
->>> td.keys()
-['foo']
+import redislite.patch
+redislite.patch.patch_redis()
+import redis_collections
+
+td = redis_collections.Dict()
+td['foo'] = 'bar'
+td.keys()
+# ['foo']
 ```
 
 ## Running and using Multiple servers
@@ -164,35 +166,25 @@ Redislite will start a new server if the redis rdb filename isn't specified or i
 Then we access the value of 'servernumber' and print it.
 
 ```python
->>> import redislite
->>> servers = {}
->>> for redis_server_number in range(10):
-...     servers[redis_server_number] = redislite.Redis()
-...     servers[redis_server_number].set('servernumber', redis_server_number)
-...
-True
-True
-True
-True
-True
-True
-True
-True
-True
-True
->>> for redis_server in servers.values():
-...     redis_server.get('servernumber')
-...
-b'0'
-b'1'
-b'2'
-b'3'
-b'4'
-b'5'
-b'6'
-b'7'
-b'8'
-b'9'
+import redislite
+
+servers = {}
+for redis_server_number in range(10):
+    servers[redis_server_number] = redislite.Redis()
+    servers[redis_server_number].set('servernumber', redis_server_number)
+
+for redis_server in servers.values():
+    print(redis_server.get('servernumber'))
+# b'0'
+# b'1'
+# b'2'
+# b'3'
+# b'4'
+# b'5'
+# b'6'
+# b'7'
+# b'8'
+# b'9'
 ```
 
 ## Multiple Servers with different configurations in the same script
@@ -204,18 +196,18 @@ second instance is a read-only slave of the first instance.
 
 
 ```python
->>> import redislite
->>> master=redislite.Redis(serverconfig={'port': '8002'})
->>> slave=redislite.Redis(serverconfig={'slaveof': "127.0.0.1 8002"})
->>> slave.keys()
-[]
->>> master.set('key', 'value')
-True
->>> master.keys()
-['key']
->>> slave.keys()
-['key']
->>>
+import redislite
+
+master = redislite.Redis(serverconfig={'port': '8002'})
+slave = redislite.Redis(serverconfig={'slaveof': "127.0.0.1 8002"})
+slave.keys()
+# []
+master.set('key', 'value')
+# True
+master.keys()
+# ['key']
+slave.keys()
+# ['key']
 ```
 
 ## FalkorDB-Specific Features
@@ -225,28 +217,28 @@ True
 FalkorDBLite provides full support for graph database operations using Cypher queries:
 
 ```python
->>> from redislite.falkordb_client import FalkorDB
->>> 
->>> db = FalkorDB('/tmp/graphs.db')
->>> g = db.select_graph('social')
->>> 
->>> # Create a graph with nodes and relationships
->>> g.query('''
-...     CREATE (alice:Person {name: "Alice", age: 30}),
-...            (bob:Person {name: "Bob", age: 25}),
-...            (carol:Person {name: "Carol", age: 28}),
-...            (alice)-[:KNOWS]->(bob),
-...            (bob)-[:KNOWS]->(carol),
-...            (alice)-[:KNOWS]->(carol)
-... ''')
->>> 
->>> # Find all friends of Alice
->>> result = g.query('''
-...     MATCH (p:Person {name: "Alice"})-[:KNOWS]->(friend)
-...     RETURN friend.name, friend.age
-... ''')
->>> for row in result.result_set:
-...     print(f"Friend: {row[0]}, Age: {row[1]}")
+from redislite.falkordb_client import FalkorDB
+
+db = FalkorDB('/tmp/graphs.db')
+g = db.select_graph('social')
+
+# Create a graph with nodes and relationships
+g.query('''
+    CREATE (alice:Person {name: "Alice", age: 30}),
+           (bob:Person {name: "Bob", age: 25}),
+           (carol:Person {name: "Carol", age: 28}),
+           (alice)-[:KNOWS]->(bob),
+           (bob)-[:KNOWS]->(carol),
+           (alice)-[:KNOWS]->(carol)
+''')
+
+# Find all friends of Alice
+result = g.query('''
+    MATCH (p:Person {name: "Alice"})-[:KNOWS]->(friend)
+    RETURN friend.name, friend.age
+''')
+for row in result.result_set:
+    print(f"Friend: {row[0]}, Age: {row[1]}")
 ```
 
 ### Multiple Graphs
@@ -254,22 +246,22 @@ FalkorDBLite provides full support for graph database operations using Cypher qu
 Work with multiple independent graphs in the same database:
 
 ```python
->>> from redislite.falkordb_client import FalkorDB
->>> 
->>> db = FalkorDB('/tmp/multi.db')
->>> 
->>> # Create different graphs for different domains
->>> users = db.select_graph('users')
->>> products = db.select_graph('products')
->>> transactions = db.select_graph('transactions')
->>> 
->>> # Each graph is independent
->>> users.query('CREATE (u:User {name: "Alice"})')
->>> products.query('CREATE (p:Product {name: "Laptop"})')
->>> 
->>> # List all graphs
->>> all_graphs = db.list_graphs()
->>> print(all_graphs)
+from redislite.falkordb_client import FalkorDB
+
+db = FalkorDB('/tmp/multi.db')
+
+# Create different graphs for different domains
+users = db.select_graph('users')
+products = db.select_graph('products')
+transactions = db.select_graph('transactions')
+
+# Each graph is independent
+users.query('CREATE (u:User {name: "Alice"})')
+products.query('CREATE (p:Product {name: "Laptop"})')
+
+# List all graphs
+all_graphs = db.list_graphs()
+print(all_graphs)
 ```
 
 ## More Information
