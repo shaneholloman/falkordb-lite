@@ -1,189 +1,124 @@
 # Copyright (c) 2024, FalkorDB
 # Copyrights licensed under the New BSD License
 # See the accompanying LICENSE.txt file for terms.
-"""
-FalkorDB client wrapper for redislite
+"""FalkorDB client wrapper for redislite."""
+import importlib
+from importlib import util as importlib_util
+from pathlib import Path
+import sys
+from typing import Any, List
 
-This module provides a FalkorDB-compatible API wrapper around the redislite client
-to enable graph database operations using Cypher queries.
-"""
-import json
-from typing import Dict, Optional, List, Any
-from .client import Redis, StrictRedis
+from .client import Redis
+from .client import StrictRedis as _StrictRedis
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# `falkordb-py` ships as a pure Python package.  This workspace bundles a
+# `falkordb.so` artifact for the embedded server which would otherwise shadow
+# the Python driver on the import path.  Load the Python sources explicitly so
+# we always expose the rich driver API the issue requires.
+def _load_python_falkordb():
+    module_name = "falkordb"
+    existing = sys.modules.get(module_name)
+    if existing and isinstance(getattr(existing, "__file__", None), str):
+        file_path = getattr(existing, "__file__", "")
+        if isinstance(file_path, str) and file_path.endswith("__init__.py"):
+            return existing
+
+    original_sys_path = list(sys.path)
+    try:
+        sanitized = [
+            entry for entry in original_sys_path
+            if Path(entry or ".").resolve() != _PROJECT_ROOT
+        ]
+        sys.path[:] = sanitized
+        module = importlib.import_module(module_name)
+        file_path = getattr(module, "__file__", "")
+        if isinstance(file_path, str) and file_path.endswith("__init__.py"):
+            return module
+    except ImportError:
+        pass
+    finally:
+        sys.path[:] = original_sys_path
+
+    for entry in list(sys.path):
+        candidate = Path(entry) / module_name / "__init__.py"
+        if candidate.is_file():
+            spec = importlib_util.spec_from_file_location(
+                module_name,
+                candidate,
+                submodule_search_locations=[str(candidate.parent)],
+            )
+            if spec and spec.loader:
+                module = importlib_util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                sys.modules[module_name] = module
+                return module
+
+    raise ImportError("Unable to locate the Python implementation of falkordb")
 
 
-class Graph:
-    """
-    Graph, collection of nodes and edges.
-    Provides methods to execute Cypher queries against a FalkorDB graph.
-    """
+BaseFalkorDB: Any
+BaseGraph: Any
+BaseQueryResult: Any
 
-    def __init__(self, client, name: str):
-        """
-        Create a new graph.
+_falkordb = _load_python_falkordb()
+BaseFalkorDB = _falkordb.FalkorDB
+BaseGraph = _falkordb.Graph
+BaseQueryResult = _falkordb.QueryResult
 
-        Args:
-            client: The Redis client object.
-            name (str): Graph ID/name
-        """
-        self._name = name
-        self.client = client
+StrictRedis = _StrictRedis
+QueryResult = BaseQueryResult
 
-    @property
-    def name(self) -> str:
-        """
-        Get the graph name.
+__all__ = ["FalkorDB", "Graph", "QueryResult", "Redis", "StrictRedis"]
 
-        Returns:
-            str: The graph name.
-        """
-        return self._name
 
-    def query(self, q: str, params: Optional[Dict[str, Any]] = None,
-              timeout: Optional[int] = None):
-        """
-        Executes a Cypher query against the graph.
+class _EmbeddedGraphMixin:
+    """Mixin that adapts falkordb-py Graph to the embedded client."""
 
-        Args:
-            q (str): The Cypher query.
-            params (dict): Query parameters (optional).
-            timeout (int): Maximum query runtime in milliseconds (optional).
+    client: Any
 
-        Returns:
-            QueryResult: Query result set.
-        """
-        query = q
-
-        # Build query command
-        command = ["GRAPH.QUERY", self.name, query]
-
-        # Add parameters if provided
-        if params:
-            command.extend(["PARAMS", str(len(params) * 2)])
-            for key, value in params.items():
-                command.extend([key, json.dumps(value)])
-
-        # Include timeout if specified
-        if isinstance(timeout, int):
-            command.extend(["TIMEOUT", timeout])
-        elif timeout is not None:
-            raise Exception("Timeout argument must be a positive integer")
-
-        # Add compact flag at the end
-        command.append("--compact")
-        
-        # Execute query
-        response = self.client.execute_command(*command)
-        return QueryResult(response)
-
-    def ro_query(self, q: str, params: Optional[Dict[str, Any]] = None,
-                 timeout: Optional[int] = None):
-        """
-        Executes a read-only Cypher query against the graph.
-
-        Args:
-            q (str): The Cypher query.
-            params (dict): Query parameters (optional).
-            timeout (int): Maximum query runtime in milliseconds (optional).
-
-        Returns:
-            QueryResult: Query result set.
-        """
-        query = q
-
-        # Build query command
-        command = ["GRAPH.RO_QUERY", self.name, query]
-
-        # Add parameters if provided
-        if params:
-            command.extend(["PARAMS", str(len(params) * 2)])
-            for key, value in params.items():
-                command.extend([key, json.dumps(value)])
-
-        # Include timeout if specified
-        if isinstance(timeout, int):
-            command.extend(["TIMEOUT", timeout])
-        elif timeout is not None:
-            raise Exception("Timeout argument must be a positive integer")
-
-        # Add compact flag at the end
-        command.append("--compact")
-        
-        # Execute query
-        response = self.client.execute_command(*command)
-        return QueryResult(response)
-
-    def delete(self) -> None:
-        """
-        Deletes the graph.
-
-        Returns:
-            None
-        """
-        return self.client.execute_command("GRAPH.DELETE", self._name)
-
-    def copy(self, clone: str):
-        """
-        Creates a copy of the graph.
-
-        Args:
-            clone (str): Name of cloned graph
-
-        Returns:
-            Graph: The cloned graph
-        """
-        self.client.execute_command("GRAPH.COPY", self.name, clone)
+    def copy(self, clone: str):  # type: ignore[override]
+        """Ensure copies return the embedded Graph subclass."""
+        BaseGraph.copy(self, clone)
         return Graph(self.client, clone)
 
-    def slowlog(self):
-        """
-        Get a list containing up to 10 of the slowest queries issued
-        against the graph.
 
-        Returns:
-            List: List of slow log entries.
-        """
-        return self.client.execute_command("GRAPH.SLOWLOG", self._name)
+class Graph(_EmbeddedGraphMixin, BaseGraph):
+    """Graph implementation that reuses falkordb-py's full API surface."""
+
+    def __init__(self, client, name: str):  # noqa: D401 - inherit docstring
+        BaseGraph.__init__(self, client, name)
 
 
-class QueryResult:
-    """
-    Represents the result of a graph query.
-    """
+class _EmbeddedFalkorDBMixin:
+    """Mixin that wires falkordb-py into the embedded Redis server."""
 
-    def __init__(self, response):
-        """
-        Initialize query result.
+    def __init__(self, dbfilename=None, serverconfig=None, **kwargs):
+        """Create a new FalkorDB instance using redislite."""
+        self.client = Redis(
+            dbfilename=dbfilename,
+            serverconfig=serverconfig or {},
+            **kwargs
+        )
+        self.connection = self.client
+        self.execute_command = self.client.execute_command
+        self.flushdb = self.client.flushdb
 
-        Args:
-            response: Raw response from Redis/FalkorDB
-        """
-        self._raw_response = response
-        self._parse_response(response)
+    def select_graph(self, name: str) -> Graph:
+        """Select a graph by name using the embedded Graph subclass."""
+        return Graph(self.client, name)
 
-    def _parse_response(self, response):
-        """
-        Parse the raw response from FalkorDB.
-
-        Args:
-            response: Raw response from Redis/FalkorDB
-        """
-        # FalkorDB returns results in a specific format
-        # [result_set, statistics]
-        if isinstance(response, list) and len(response) >= 2:
-            self.result_set = response[0] if response[0] else []
-            self._statistics = response[1] if len(response) > 1 else []
-        else:
-            self.result_set = []
-            self._statistics = []
-
-    @property
-    def statistics(self):
-        """Get query statistics."""
-        return self._statistics
+    def list_graphs(self) -> List[str]:
+        """Return graph names, tolerating missing FalkorDB module."""
+        try:
+            result = BaseFalkorDB.list_graphs(self)
+            return result if result else []
+        except Exception:
+            return []
 
 
-class FalkorDB:
+class FalkorDB(_EmbeddedFalkorDBMixin, BaseFalkorDB):
     """
     FalkorDB Class for interacting with a FalkorDB-enabled Redis server.
 
@@ -206,47 +141,6 @@ class FalkorDB:
         for row in result.result_set:
             print(row)
     """
-
-    def __init__(self, dbfilename=None, serverconfig=None, **kwargs):
-        """
-        Create a new FalkorDB instance using redislite.
-
-        Args:
-            dbfilename (str): Path to the database file (optional)
-            serverconfig (dict): Additional Redis server configuration (optional)
-            **kwargs: Additional arguments passed to the Redis client
-        """
-        # Create an embedded Redis instance with FalkorDB module loaded
-        self.client = Redis(
-            dbfilename=dbfilename,
-            serverconfig=serverconfig or {},
-            **kwargs
-        )
-
-    def select_graph(self, name: str) -> Graph:
-        """
-        Select a graph by name.
-
-        Args:
-            name (str): The name of the graph
-
-        Returns:
-            Graph: A Graph instance
-        """
-        return Graph(self.client, name)
-
-    def list_graphs(self) -> List[str]:
-        """
-        List all graphs in the database.
-
-        Returns:
-            List[str]: List of graph names
-        """
-        try:
-            result = self.client.execute_command("GRAPH.LIST")
-            return result if result else []
-        except Exception:
-            return []
 
     def close(self):
         """Close the connection and cleanup."""
