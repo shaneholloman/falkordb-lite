@@ -106,9 +106,19 @@ class AsyncRedis(RedisMixin):
         # Use object.__getattribute__ to avoid recursion
         try:
             client = object.__getattribute__(self, '_client')
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}' "
+                f"(client not initialized)"
+            )
+        
+        # Now try to get the attribute from the client
+        try:
             return getattr(client, name)
         except AttributeError:
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
     
     @property
     def pid(self):

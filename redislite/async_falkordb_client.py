@@ -170,28 +170,25 @@ class AsyncGraph:
         Returns:
             A simple result object with result_set attribute
         """
-        # Import the QueryResult from falkordb to parse results properly
+        # Define a single SimpleResult class
+        class SimpleResult:
+            def __init__(self, result):
+                # Handle list results
+                if isinstance(result, list):
+                    # First element is usually the result set if list is not empty
+                    self.result_set = result[0] if result and len(result) > 0 else []
+                else:
+                    self.result_set = []
+                self._raw = result
+        
+        # Try to use falkordb's QueryResult if available
         try:
             from falkordb import QueryResult
-            # The QueryResult expects the graph and the raw result
-            # We'll create a simple wrapper
-            class SimpleResult:
-                def __init__(self, result):
-                    if isinstance(result, list) and len(result) > 0:
-                        # First element is usually the result set
-                        self.result_set = result[0] if result else []
-                    else:
-                        self.result_set = []
-                    self._raw = result
-            
+            # Note: If we wanted to use the real QueryResult, we'd need to 
+            # pass the proper graph context. For now, we use SimpleResult.
             return SimpleResult(raw_result)
         except ImportError:
             # Fallback if falkordb is not available
-            class SimpleResult:
-                def __init__(self, result):
-                    self.result_set = result if isinstance(result, list) else []
-                    self._raw = result
-            
             return SimpleResult(raw_result)
 
 
@@ -278,9 +275,14 @@ class AsyncFalkorDB:
         try:
             result = await self.client.execute_command('GRAPH.LIST')
             return result if result else []
-        except Exception:
-            # If FalkorDB module is not loaded or command fails
-            return []
+        except Exception as e:
+            # If FalkorDB module is not loaded, the command will fail
+            # We catch broadly here since redis errors can vary
+            error_msg = str(e).lower()
+            if 'unknown command' in error_msg or 'graph' in error_msg:
+                return []
+            # Re-raise unexpected errors
+            raise
     
     async def close(self):
         """Close the connection and cleanup."""

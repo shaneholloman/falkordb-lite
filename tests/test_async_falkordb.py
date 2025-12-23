@@ -6,6 +6,7 @@ Tests for async FalkorDB client functionality.
 """
 import asyncio
 import os
+import shutil
 import tempfile
 import unittest
 from redislite.async_falkordb_client import AsyncFalkorDB
@@ -29,7 +30,6 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
             finally:
                 # Cleanup
                 if os.path.exists(temp_dir):
-                    import shutil
                     shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
@@ -49,7 +49,7 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
             finally:
                 # Cleanup
                 if os.path.exists(temp_dir):
-                    import shutil
+
                     shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
@@ -85,7 +85,7 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
             finally:
                 # Cleanup
                 if os.path.exists(temp_dir):
-                    import shutil
+
                     shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
@@ -104,7 +104,7 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
             finally:
                 # Cleanup
                 if os.path.exists(temp_dir):
-                    import shutil
+
                     shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
@@ -132,7 +132,7 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
             finally:
                 # Cleanup
                 if os.path.exists(temp_dir):
-                    import shutil
+
                     shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
@@ -160,7 +160,7 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
             finally:
                 # Cleanup
                 if os.path.exists(temp_dir):
-                    import shutil
+
                     shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
