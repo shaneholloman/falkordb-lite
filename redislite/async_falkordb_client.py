@@ -284,7 +284,7 @@ class AsyncFalkorDB:
     
     async def close(self):
         """Close the connection and cleanup."""
-        if hasattr(self, 'client'):
+        if 'client' in self.__dict__:
             await self.client.close()
     
     async def flushdb(self):

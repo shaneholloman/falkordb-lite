@@ -91,9 +91,9 @@ class AsyncRedis(RedisMixin):
     
     async def close(self):
         """Close the async connection and cleanup the server."""
-        if hasattr(self, '_client'):
+        if '_client' in self.__dict__:
             await self._client.aclose()
-        if hasattr(self, '_sync_client'):
+        if '_sync_client' in self.__dict__:
             self._sync_client._cleanup()
     
     def __getattr__(self, name):
@@ -103,18 +103,23 @@ class AsyncRedis(RedisMixin):
         This allows AsyncRedis to act like a redis.asyncio.Redis instance
         for all Redis commands.
         """
-        return getattr(self._client, name)
+        # Use object.__getattribute__ to avoid recursion
+        try:
+            client = object.__getattribute__(self, '_client')
+            return getattr(client, name)
+        except AttributeError:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
     @property
     def pid(self):
         """Get the Redis server process ID."""
-        if hasattr(self, '_sync_client'):
+        if '_sync_client' in self.__dict__:
             return self._sync_client.pid
         return None
     
     def _connection_count(self):
         """Get the number of connections to the Redis server."""
-        if hasattr(self, '_sync_client'):
+        if '_sync_client' in self.__dict__:
             return self._sync_client._connection_count()
         return 0
 
