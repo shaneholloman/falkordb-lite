@@ -227,8 +227,10 @@ async def shutdown():
 @app.get("/person/{name}")
 async def get_person(name: str):
     g = db.select_graph('social')
+    # Use parameterized queries to prevent injection
     result = await g.ro_query(
-        f'MATCH (p:Person {{name: "{name}"}}) RETURN p.name, p.age'
+        'MATCH (p:Person {name: $name}) RETURN p.name, p.age',
+        params={'name': name}
     )
     if result.result_set:
         return {"name": result.result_set[0][0], "age": result.result_set[0][1]}
@@ -237,7 +239,11 @@ async def get_person(name: str):
 @app.post("/person")
 async def create_person(name: str, age: int):
     g = db.select_graph('social')
-    await g.query(f'CREATE (p:Person {{name: "{name}", age: {age}}})')
+    # Use parameterized queries to prevent injection
+    await g.query(
+        'CREATE (p:Person {name: $name, age: $age})',
+        params={'name': name, 'age': age}
+    )
     return {"status": "created", "name": name, "age": age}
 ```
 
@@ -252,8 +258,10 @@ db = AsyncFalkorDB('/tmp/web.db')
 async def handle_get_person(request):
     name = request.match_info['name']
     g = db.select_graph('social')
+    # Use parameterized queries to prevent injection
     result = await g.ro_query(
-        f'MATCH (p:Person {{name: "{name}"}}) RETURN p.name, p.age'
+        'MATCH (p:Person {name: $name}) RETURN p.name, p.age',
+        params={'name': name}
     )
     if result.result_set:
         return web.json_response({

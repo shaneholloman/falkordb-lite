@@ -161,4 +161,4 @@ __all__ = [
 from .client import Redis, StrictRedis  # NOQA
 from .falkordb_client import FalkorDB, Graph  # NOQA
 from .async_client import AsyncRedis, AsyncStrictRedis  # NOQA
-from .async_falkordb_client import AsyncFalkorDB, AsyncGraph  # NOQA
+from .async_falkordb_client import AsyncFalkorDB, AsyncGraph, AsyncQueryResult  # NOQA
