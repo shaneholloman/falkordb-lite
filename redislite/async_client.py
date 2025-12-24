@@ -58,7 +58,9 @@ class AsyncRedis(RedisMixin):
         # We need to call the mixin's __init__ which will start the server
         
         # Start the embedded server using sync client
-        self._sync_client = SyncRedis(dbfilename=dbfilename, serverconfig=serverconfig)
+        self._sync_client = SyncRedis(dbfilename=dbfilename, serverconfig=serverconfig or {})
+        # Mark the sync client as managed by async to prevent shutdown issues
+        self._sync_client._async_managed = True
         
         # Copy server-related attributes
         self.redis_dir = self._sync_client.redis_dir
@@ -93,6 +95,8 @@ class AsyncRedis(RedisMixin):
         if '_client' in self.__dict__:
             await self._client.aclose()
         if '_sync_client' in self.__dict__:
+            # Mark the sync client as managed by async to prevent it from attempting shutdown
+            self._sync_client._async_managed = True
             self._sync_client._cleanup()
     
     def __getattr__(self, name):
