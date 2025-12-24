@@ -93,6 +93,7 @@ class AsyncRedis(RedisMixin):
     async def close(self):
         """Close the async connection and cleanup the server."""
         if '_client' in self.__dict__:
+            # Note: redis.asyncio.Redis uses aclose() not close()
             await self._client.aclose()
         if '_sync_client' in self.__dict__:
             # Mark the sync client as managed by async to prevent it from attempting shutdown

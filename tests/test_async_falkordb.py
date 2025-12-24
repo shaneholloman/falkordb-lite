@@ -16,51 +16,42 @@ from redislite.async_client import AsyncRedis
 class TestAsyncFalkorDBClient(unittest.TestCase):
     """Test async FalkorDB client functionality"""
 
+    def setUp(self):
+        """Set up test fixtures"""
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_file = os.path.join(self.temp_dir, 'falkordb.db')
+
+    def tearDown(self):
+        """Clean up test fixtures"""
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+
     def test_async_falkordb_creation(self):
         """Test that we can create an AsyncFalkorDB instance"""
-        temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, 'falkordb.db')
-        
         async def run_test():
-            try:
-                db = AsyncFalkorDB(dbfilename=db_file)
-                self.assertIsNotNone(db)
-                self.assertIsNotNone(db.client)
-                await db.close()
-            finally:
-                # Cleanup
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir)
+            db = AsyncFalkorDB(dbfilename=self.db_file)
+            self.assertIsNotNone(db)
+            self.assertIsNotNone(db.client)
+            await db.close()
         
         asyncio.run(run_test())
 
     def test_async_select_graph(self):
         """Test that we can select a graph asynchronously"""
-        temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, 'falkordb.db')
-        
         async def run_test():
-            try:
-                db = AsyncFalkorDB(dbfilename=db_file)
-                graph = db.select_graph('test_graph')
-                self.assertIsNotNone(graph)
-                self.assertEqual(graph.name, 'test_graph')
-                await db.close()
-            finally:
-                # Cleanup
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir)
+            db = AsyncFalkorDB(dbfilename=self.db_file)
+            graph = db.select_graph('test_graph')
+            self.assertIsNotNone(graph)
+            self.assertEqual(graph.name, 'test_graph')
+            await db.close()
         
         asyncio.run(run_test())
 
     def test_async_simple_query(self):
         """Test executing a simple Cypher query asynchronously"""
-        temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, 'falkordb.db')
-        
         async def run_test():
             try:
-                db = AsyncFalkorDB(dbfilename=db_file)
+                db = AsyncFalkorDB(dbfilename=self.db_file)
                 graph = db.select_graph('social')
                 
                 # Create a simple node with parameterized query
@@ -84,66 +75,43 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
                     self.skipTest(f"FalkorDB module not loaded: {e}")
                 else:
                     raise
-            finally:
-                # Cleanup
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
 
     def test_async_context_manager(self):
         """Test using AsyncFalkorDB as a context manager"""
-        temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, 'falkordb.db')
-        
         async def run_test():
-            try:
-                async with AsyncFalkorDB(dbfilename=db_file) as db:
-                    graph = db.select_graph('test')
-                    self.assertIsNotNone(graph)
-                # Connection should be closed automatically
-            finally:
-                # Cleanup
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir)
+            async with AsyncFalkorDB(dbfilename=self.db_file) as db:
+                graph = db.select_graph('test')
+                self.assertIsNotNone(graph)
+            # Connection should be closed automatically
         
         asyncio.run(run_test())
 
     def test_async_redis_basic_operations(self):
         """Test basic async Redis operations"""
-        temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, 'redis.db')
-        
         async def run_test():
-            try:
-                redis_conn = AsyncRedis(dbfilename=db_file)
-                
-                # Test set and get
-                await redis_conn.set('key', 'value')
-                value = await redis_conn.get('key')
-                self.assertEqual(value, b'value')
-                
-                # Test delete
-                await redis_conn.delete('key')
-                value = await redis_conn.get('key')
-                self.assertIsNone(value)
-                
-                await redis_conn.close()
-            finally:
-                # Cleanup
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir)
+            redis_conn = AsyncRedis(dbfilename=self.db_file)
+            
+            # Test set and get
+            await redis_conn.set('key', 'value')
+            value = await redis_conn.get('key')
+            self.assertEqual(value, b'value')
+            
+            # Test delete
+            await redis_conn.delete('key')
+            value = await redis_conn.get('key')
+            self.assertIsNone(value)
+            
+            await redis_conn.close()
         
         asyncio.run(run_test())
 
     def test_async_list_graphs(self):
         """Test listing graphs asynchronously"""
-        temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, 'falkordb.db')
-        
         async def run_test():
             try:
-                db = AsyncFalkorDB(dbfilename=db_file)
+                db = AsyncFalkorDB(dbfilename=self.db_file)
                 
                 # List graphs (should be empty or return a list)
                 graphs = await db.list_graphs()
@@ -156,10 +124,6 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
                     self.skipTest(f"FalkorDB module not loaded: {e}")
                 else:
                     raise
-            finally:
-                # Cleanup
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir)
         
         asyncio.run(run_test())
 
