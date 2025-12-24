@@ -372,8 +372,8 @@ from redislite.async_falkordb_client import AsyncFalkorDB
 
 async def create_person(graph, name, age):
     """Create a person node asynchronously"""
-    query = f'CREATE (p:Person {{name: "{name}", age: {age}}}) RETURN p'
-    return await graph.query(query)
+    query = 'CREATE (p:Person {name: $name, age: $age}) RETURN p'
+    return await graph.query(query, params={'name': name, 'age': age})
 
 async def main():
     db = AsyncFalkorDB('/tmp/social.db')

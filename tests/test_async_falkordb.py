@@ -63,8 +63,11 @@ class TestAsyncFalkorDBClient(unittest.TestCase):
                 db = AsyncFalkorDB(dbfilename=db_file)
                 graph = db.select_graph('social')
                 
-                # Create a simple node
-                result = await graph.query('CREATE (n:Person {name: "Alice"}) RETURN n')
+                # Create a simple node with parameterized query
+                result = await graph.query(
+                    'CREATE (n:Person {name: $name}) RETURN n',
+                    params={'name': 'Alice'}
+                )
                 self.assertIsNotNone(result)
                 
                 # Query the node back
