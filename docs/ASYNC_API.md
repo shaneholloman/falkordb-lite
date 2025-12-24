@@ -56,8 +56,11 @@ async def main():
         # Select a graph
         g = db.select_graph('social')
         
-        # Execute a query
-        await g.query('CREATE (n:Person {name: "Alice", age: 30}) RETURN n')
+        # Execute a query using parameterized queries
+        await g.query(
+            'CREATE (n:Person {name: $name, age: $age}) RETURN n',
+            params={'name': 'Alice', 'age': 30}
+        )
         
         # Read data
         result = await g.query('MATCH (n:Person) RETURN n.name, n.age')
@@ -83,7 +86,10 @@ from redislite import AsyncFalkorDB
 async def main():
     async with AsyncFalkorDB('/tmp/falkordb.db') as db:
         g = db.select_graph('social')
-        await g.query('CREATE (n:Person {name: "Alice"}) RETURN n')
+        await g.query(
+            'CREATE (n:Person {name: $name}) RETURN n',
+            params={'name': 'Alice'}
+        )
         result = await g.query('MATCH (n:Person) RETURN n')
         # Automatically closed when exiting the context
 
@@ -136,18 +142,30 @@ async def main():
     try:
         g = db.select_graph('social')
         
-        # Create multiple nodes concurrently
+        # Create multiple nodes concurrently using parameterized queries
         await asyncio.gather(
-            g.query('CREATE (p:Person {name: "Alice", age: 30})'),
-            g.query('CREATE (p:Person {name: "Bob", age: 25})'),
-            g.query('CREATE (p:Person {name: "Carol", age: 28})'),
+            g.query(
+                'CREATE (p:Person {name: $name, age: $age})',
+                params={'name': 'Alice', 'age': 30}
+            ),
+            g.query(
+                'CREATE (p:Person {name: $name, age: $age})',
+                params={'name': 'Bob', 'age': 25}
+            ),
+            g.query(
+                'CREATE (p:Person {name: $name, age: $age})',
+                params={'name': 'Carol', 'age': 28}
+            ),
         )
         
-        # Create relationships
-        await g.query('''
-            MATCH (a:Person {name: "Alice"}), (b:Person {name: "Bob"})
+        # Create relationships using parameterized queries
+        await g.query(
+            '''
+            MATCH (a:Person {name: $name_a}), (b:Person {name: $name_b})
             CREATE (a)-[:KNOWS]->(b)
-        ''')
+            ''',
+            params={'name_a': 'Alice', 'name_b': 'Bob'}
+        )
         
         # Query the graph
         result = await g.query('MATCH (p:Person) RETURN p.name, p.age')

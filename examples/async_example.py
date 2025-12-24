@@ -68,22 +68,37 @@ async def demo_async_falkordb():
         print("\n1. Creating a social graph...")
         g = db.select_graph('social')
         
-        # Create nodes asynchronously
+        # Create nodes asynchronously using parameterized queries
         print("2. Creating person nodes...")
-        await g.query('CREATE (p:Person {name: "Alice", age: 30})')
-        await g.query('CREATE (p:Person {name: "Bob", age: 25})')
-        await g.query('CREATE (p:Person {name: "Carol", age: 28})')
+        await g.query(
+            'CREATE (p:Person {name: $name, age: $age})',
+            params={'name': 'Alice', 'age': 30}
+        )
+        await g.query(
+            'CREATE (p:Person {name: $name, age: $age})',
+            params={'name': 'Bob', 'age': 25}
+        )
+        await g.query(
+            'CREATE (p:Person {name: $name, age: $age})',
+            params={'name': 'Carol', 'age': 28}
+        )
         
-        # Create relationships
+        # Create relationships using parameterized queries
         print("3. Creating relationships...")
-        await g.query('''
-            MATCH (a:Person {name: "Alice"}), (b:Person {name: "Bob"})
+        await g.query(
+            '''
+            MATCH (a:Person {name: $name_a}), (b:Person {name: $name_b})
             CREATE (a)-[:KNOWS]->(b)
-        ''')
-        await g.query('''
-            MATCH (b:Person {name: "Bob"}), (c:Person {name: "Carol"})
+            ''',
+            params={'name_a': 'Alice', 'name_b': 'Bob'}
+        )
+        await g.query(
+            '''
+            MATCH (b:Person {name: $name_b}), (c:Person {name: $name_c})
             CREATE (b)-[:KNOWS]->(c)
-        ''')
+            ''',
+            params={'name_b': 'Bob', 'name_c': 'Carol'}
+        )
         
         # Query the graph
         print("\n4. Querying all people:")

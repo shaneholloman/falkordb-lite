@@ -68,7 +68,8 @@ class _EmbeddedAsyncGraphMixin:
 class AsyncGraph(_EmbeddedAsyncGraphMixin, BaseAsyncGraph):
     """Async Graph implementation that reuses falkordb-py's full API surface."""
 
-    def __init__(self, client, name: str):  # noqa: D401 - inherit docstring
+    def __init__(self, client, name: str):
+        """Initialize async graph with client and name."""
         BaseAsyncGraph.__init__(self, client, name)
 
 

@@ -284,16 +284,25 @@ async def main():
     # Select a graph
     g = db.select_graph('social')
     
-    # Create nodes asynchronously
-    await g.query('CREATE (p:Person {name: "Alice", age: 30}) RETURN p')
-    await g.query('CREATE (p:Person {name: "Bob", age: 25}) RETURN p')
+    # Create nodes asynchronously using parameterized queries
+    await g.query(
+        'CREATE (p:Person {name: $name, age: $age}) RETURN p',
+        params={'name': 'Alice', 'age': 30}
+    )
+    await g.query(
+        'CREATE (p:Person {name: $name, age: $age}) RETURN p',
+        params={'name': 'Bob', 'age': 25}
+    )
     
-    # Create a relationship
-    await g.query('''
-        MATCH (a:Person {name: "Alice"}), (b:Person {name: "Bob"})
+    # Create a relationship using parameterized queries
+    await g.query(
+        '''
+        MATCH (a:Person {name: $name_a}), (b:Person {name: $name_b})
         CREATE (a)-[r:KNOWS]->(b)
         RETURN r
-    ''')
+        ''',
+        params={'name_a': 'Alice', 'name_b': 'Bob'}
+    )
     
     # Query the graph asynchronously
     result = await g.query('MATCH (p:Person) RETURN p.name, p.age')
@@ -355,7 +364,10 @@ from redislite.async_falkordb_client import AsyncFalkorDB
 async def main():
     async with AsyncFalkorDB('/tmp/falkordb.db') as db:
         g = db.select_graph('social')
-        result = await g.query('CREATE (n:Person {name: "Alice"}) RETURN n')
+        result = await g.query(
+            'CREATE (n:Person {name: $name}) RETURN n',
+            params={'name': 'Alice'}
+        )
         print(result.result_set)
     # Connection is automatically closed
 
